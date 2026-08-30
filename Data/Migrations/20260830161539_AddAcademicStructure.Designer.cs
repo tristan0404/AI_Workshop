@@ -3,6 +3,7 @@ using System;
 using AI_Workshop.Data;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 
 #nullable disable
@@ -10,9 +11,11 @@ using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 namespace AI_Workshop.Data.Migrations
 {
     [DbContext(typeof(ApplicationDbContext))]
-    partial class ApplicationDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260830161539_AddAcademicStructure")]
+    partial class AddAcademicStructure
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "10.0.5");
@@ -99,15 +102,6 @@ namespace AI_Workshop.Data.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("INTEGER");
 
-                    b.Property<DateTime?>("AttendanceClosesAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<DateTime?>("AttendanceOpenedAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("AttendanceState")
-                        .HasColumnType("INTEGER");
-
                     b.Property<int>("CourseId")
                         .HasColumnType("INTEGER");
 
@@ -115,9 +109,6 @@ namespace AI_Workshop.Data.Migrations
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("EndsAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<string>("FallbackCodeProtected")
                         .HasColumnType("TEXT");
 
                     b.Property<DateTime>("StartsAtUtc")
@@ -140,41 +131,6 @@ namespace AI_Workshop.Data.Migrations
                     b.HasIndex("CourseId", "StartsAtUtc");
 
                     b.ToTable("LectureSessions");
-                });
-
-            modelBuilder.Entity("AI_Workshop.Models.Attendance.AttendanceRecord", b =>
-                {
-                    b.Property<int>("Id")
-                        .ValueGeneratedOnAdd()
-                        .HasColumnType("INTEGER");
-
-                    b.Property<DateTime>("CheckedInAtUtc")
-                        .HasColumnType("TEXT");
-
-                    b.Property<int>("LectureSessionId")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<bool>("RequiresReview")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Source")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<int>("Status")
-                        .HasColumnType("INTEGER");
-
-                    b.Property<string>("StudentId")
-                        .IsRequired()
-                        .HasColumnType("TEXT");
-
-                    b.HasKey("Id");
-
-                    b.HasIndex("StudentId");
-
-                    b.HasIndex("LectureSessionId", "StudentId")
-                        .IsUnique();
-
-                    b.ToTable("AttendanceRecords");
                 });
 
             modelBuilder.Entity("AI_Workshop.Models.Identity.ApplicationUser", b =>
@@ -434,25 +390,6 @@ namespace AI_Workshop.Data.Migrations
                     b.Navigation("Course");
                 });
 
-            modelBuilder.Entity("AI_Workshop.Models.Attendance.AttendanceRecord", b =>
-                {
-                    b.HasOne("AI_Workshop.Models.Academic.LectureSession", "LectureSession")
-                        .WithMany("AttendanceRecords")
-                        .HasForeignKey("LectureSessionId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("AI_Workshop.Models.Identity.ApplicationUser", "Student")
-                        .WithMany("AttendanceRecords")
-                        .HasForeignKey("StudentId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
-
-                    b.Navigation("LectureSession");
-
-                    b.Navigation("Student");
-                });
-
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -513,15 +450,8 @@ namespace AI_Workshop.Data.Migrations
                     b.Navigation("Lecturers");
                 });
 
-            modelBuilder.Entity("AI_Workshop.Models.Academic.LectureSession", b =>
-                {
-                    b.Navigation("AttendanceRecords");
-                });
-
             modelBuilder.Entity("AI_Workshop.Models.Identity.ApplicationUser", b =>
                 {
-                    b.Navigation("AttendanceRecords");
-
                     b.Navigation("Enrollments");
 
                     b.Navigation("TeachingAssignments");

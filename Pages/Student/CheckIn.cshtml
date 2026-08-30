@@ -1,0 +1,19 @@
+@page
+@model AI_Workshop.Pages.Student.CheckInModel
+@{ ViewData["Title"] = "Check in"; }
+<section class="check-in-page">
+@if (Model.ResultType is not null)
+{
+    var successful = Model.ResultType is AI_Workshop.Services.CheckInResultType.Recorded or AI_Workshop.Services.CheckInResultType.AlreadyRecorded;
+    <div class="check-in-result @(successful ? "is-success" : "is-error")"><div class="result-icon">@(successful ? "✓" : "!")</div><span class="eyebrow">Attendance</span><h1>@Model.ResultMessage</h1>@if (Model.Session is not null) { <p><strong>@Model.Session.CourseCode · @Model.Session.Topic</strong><br/>@Model.Session.StartsAt.ToString("dddd, d MMMM · HH:mm") · @(Model.Session.Venue ?? "Venue TBC")</p> }<a class="button button-primary" asp-page="/Student/Courses/Index">View my courses</a></div>
+}
+else if (Model.Session is not null)
+{
+    <div class="check-in-card panel"><span class="eyebrow">Confirm attendance</span><h1>@Model.Session.CourseCode</h1><h2>@Model.Session.Topic</h2><dl><div><dt>Course</dt><dd>@Model.Session.CourseName</dd></div><div><dt>Time</dt><dd>@Model.Session.StartsAt.ToString("ddd, d MMM · HH:mm")</dd></div><div><dt>Venue</dt><dd>@(Model.Session.Venue ?? "Venue TBC")</dd></div></dl>@if (Model.Session.IsOpen) { <form method="post" asp-page-handler="Qr"><input asp-for="Token" type="hidden"/><button class="button button-primary check-in-submit" type="submit">Confirm my attendance</button></form> } else { <div class="alert-error">Attendance is no longer open for this lecture.</div> }</div>
+}
+else
+{
+    <div class="check-in-card panel"><span class="eyebrow">Student check-in</span><h1>Enter the lecture code</h1><p>If you cannot scan the QR code, enter the six digits displayed by your lecturer.</p><form method="post" asp-page-handler="Code"><div class="field-group"><label asp-for="Input.Code"></label><input asp-for="Input.Code" class="form-control code-input" inputmode="numeric" maxlength="6" autocomplete="one-time-code" placeholder="000000" autofocus/><span asp-validation-for="Input.Code" class="field-error"></span></div><button class="button button-primary check-in-submit" type="submit">Check in</button></form></div>
+}
+</section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -1,0 +1,8 @@
+@page
+@model AI_Workshop.Pages.Student.Courses.IndexModel
+@{ ViewData["Title"] = "My courses"; }
+<section class="page-heading"><div><span class="eyebrow">Your studies</span><h1>My courses</h1><p>View your enrolments and upcoming lecture sessions.</p></div></section>
+@if (Model.Courses.Count == 0)
+{ <section class="empty-state panel"><div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M7.5 19.5v-15h9v15M4 19.5h16M10 8h4M10 12h4"/></svg></div><h2>No enrolments yet</h2><p>Your courses will appear here after a lecturer enrols your student account.</p></section> }
+else
+{ <section class="course-card-grid">@foreach (var course in Model.Courses) { <article class="course-card panel"><div class="course-code">@course.Code</div><div><span class="eyebrow">@course.AcademicYear · Semester @course.Semester</span><h2>@course.Name</h2><p>@course.Lecturer</p></div><div class="course-card-footer"><span>@(course.NextSession is null ? "No upcoming lectures" : $"Next: {course.NextSession:ddd, d MMM · HH:mm}")</span><a asp-page="Details" asp-route-id="@course.Id">View course →</a></div></article> }</section> }

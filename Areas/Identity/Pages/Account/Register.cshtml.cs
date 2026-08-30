@@ -48,7 +48,7 @@ public sealed class RegisterModel(
 
     public async Task<IActionResult> OnPostAsync(string? returnUrl = null)
     {
-        returnUrl ??= Url.Content("~/");
+        returnUrl ??= Url.Content("~/Dashboard");
         ReturnUrl = returnUrl;
         if (!ModelState.IsValid) return Page();
 

@@ -1,0 +1,22 @@
+@page
+@model AI_Workshop.Pages.Lecturer.Courses.IndexModel
+@{ ViewData["Title"] = "Courses"; }
+<section class="page-heading">
+    <div><span class="eyebrow">Academic setup</span><h1>Your courses</h1><p>Manage modules, student enrolments, and scheduled lecture sessions.</p></div>
+    <a class="button button-primary" asp-page="Create"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New course</a>
+</section>
+@if (TempData["StatusMessage"] is string statusMessage)
+{ <div class="alert-success" role="status">@statusMessage</div> }
+@if (Model.Courses.Count == 0)
+{
+    <section class="empty-state panel"><div class="empty-icon"><svg viewBox="0 0 24 24"><path d="M7.5 19.5v-15h9v15M4 19.5h16M10 8h4M10 12h4"/></svg></div><h2>No courses yet</h2><p>Create your first course to begin enrolling students and scheduling lectures.</p><a class="button button-primary" asp-page="Create">Create a course</a></section>
+}
+else
+{
+    <section class="data-panel panel">
+        <div class="table-wrap"><table class="data-table"><thead><tr><th>Course</th><th>Period</th><th>Students</th><th>Sessions</th><th>Status</th><th></th></tr></thead><tbody>
+        @foreach (var course in Model.Courses)
+        { <tr><td><a class="primary-cell" asp-page="Details" asp-route-id="@course.Id"><strong>@course.Code</strong><span>@course.Name</span></a></td><td>@course.AcademicYear · Semester @course.Semester</td><td>@course.StudentCount</td><td>@course.SessionCount</td><td><span class="status-pill @(course.IsArchived ? "status-neutral" : "")">@(course.IsArchived ? "Archived" : "Active")</span></td><td><a class="table-action" asp-page="Details" asp-route-id="@course.Id">Open →</a></td></tr> }
+        </tbody></table></div>
+    </section>
+}

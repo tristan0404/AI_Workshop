@@ -1,0 +1,10 @@
+@page
+@model AI_Workshop.Pages.Lecturer.Courses.CreateModel
+@{ ViewData["Title"] = "New course"; }
+<section class="page-heading"><div><span class="eyebrow">Academic setup</span><h1>Create a course</h1><p>Add the module offering students will enrol in.</p></div></section>
+<section class="form-panel panel"><form method="post">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <div class="form-grid"><div class="field-group"><label asp-for="Input.Code"></label><input asp-for="Input.Code" class="form-control" placeholder="e.g. ECO201"/><span asp-validation-for="Input.Code" class="field-error"></span></div><div class="field-group"><label asp-for="Input.Name"></label><input asp-for="Input.Name" class="form-control"/><span asp-validation-for="Input.Name" class="field-error"></span></div><div class="field-group"><label asp-for="Input.AcademicYear"></label><input asp-for="Input.AcademicYear" class="form-control"/><span asp-validation-for="Input.AcademicYear" class="field-error"></span></div><div class="field-group"><label asp-for="Input.Semester"></label><select asp-for="Input.Semester" class="form-select"><option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option><option value="4">Semester 4</option></select></div><div class="field-group form-span"><label asp-for="Input.Description"></label><textarea asp-for="Input.Description" class="form-control" rows="3" placeholder="Optional course description"></textarea><span asp-validation-for="Input.Description" class="field-error"></span></div></div>
+    <div class="form-actions"><a class="button button-ghost" asp-page="Index">Cancel</a><button class="button button-primary" type="submit">Create course</button></div>
+</form></section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

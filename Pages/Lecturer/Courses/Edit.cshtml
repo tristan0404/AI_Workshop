@@ -1,0 +1,10 @@
+@page "{id:int}"
+@model AI_Workshop.Pages.Lecturer.Courses.EditModel
+@{ ViewData["Title"] = "Edit course"; }
+<section class="page-heading"><div><span class="eyebrow">Academic setup</span><h1>Edit course</h1><p>Update course details or archive an offering that is no longer active.</p></div></section>
+<section class="form-panel panel"><form method="post">
+    <div asp-validation-summary="ModelOnly" class="validation-summary-errors"></div>
+    <div class="form-grid"><div class="field-group"><label asp-for="Input.Code"></label><input asp-for="Input.Code" class="form-control"/><span asp-validation-for="Input.Code" class="field-error"></span></div><div class="field-group"><label asp-for="Input.Name"></label><input asp-for="Input.Name" class="form-control"/><span asp-validation-for="Input.Name" class="field-error"></span></div><div class="field-group"><label asp-for="Input.AcademicYear"></label><input asp-for="Input.AcademicYear" class="form-control"/><span asp-validation-for="Input.AcademicYear" class="field-error"></span></div><div class="field-group"><label asp-for="Input.Semester"></label><select asp-for="Input.Semester" class="form-select"><option value="1">Semester 1</option><option value="2">Semester 2</option><option value="3">Semester 3</option><option value="4">Semester 4</option></select></div><div class="field-group form-span"><label asp-for="Input.Description"></label><textarea asp-for="Input.Description" class="form-control" rows="3"></textarea><span asp-validation-for="Input.Description" class="field-error"></span></div><label class="check-field form-span"><input asp-for="Input.IsArchived"/><span><strong>Archive this course</strong><small>Archived courses remain available for historical records.</small></span></label></div>
+    <div class="form-actions"><a class="button button-ghost" asp-page="Details" asp-route-id="@Model.CourseId">Cancel</a><button class="button button-primary" type="submit">Save changes</button></div>
+</form></section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

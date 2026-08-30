@@ -1,0 +1,8 @@
+@page "{id:int}"
+@model AI_Workshop.Pages.Student.Courses.DetailsModel
+@{ ViewData["Title"] = Model.Course.Code; }
+<section class="page-heading"><div><span class="eyebrow">@Model.Course.AcademicYear · Semester @Model.Course.Semester</span><h1>@Model.Course.Code · @Model.Course.Name</h1><p>@(Model.Course.Description ?? $"Lecturer: {Model.Course.Lecturer}")</p></div><a class="button button-ghost" asp-page="Index">All courses</a></section>
+<section class="panel data-panel"><div class="panel-header"><div><span class="eyebrow">Schedule</span><h2>Lecture sessions</h2></div><span class="status-pill">@Model.Course.Lecturer</span></div>
+@if (Model.Sessions.Count == 0) { <div class="inline-empty">No lecture sessions have been scheduled yet.</div> }
+else { <div class="session-list">@foreach (var session in Model.Sessions) { <div class="session-row @(session.Status == AI_Workshop.Models.Academic.LectureSessionStatus.Cancelled ? "is-cancelled" : "")"><div class="date-tile"><strong>@session.StartsAt.ToString("dd")</strong><span>@session.StartsAt.ToString("MMM")</span></div><div><strong>@session.Topic</strong><span>@session.StartsAt.ToString("dddd, HH:mm")–@session.EndsAt.ToString("HH:mm") · @(session.Venue ?? "Venue TBC")</span></div><span class="status-pill status-neutral">@session.Status</span></div> }</div> }
+</section>

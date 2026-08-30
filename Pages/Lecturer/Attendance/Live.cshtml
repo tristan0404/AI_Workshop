@@ -1,0 +1,20 @@
+@page "{id:int}"
+@model AI_Workshop.Pages.Lecturer.Attendance.LiveModel
+@{ ViewData["Title"] = "Live attendance"; }
+<section class="page-heading"><div><span class="eyebrow">@Model.Session.CourseCode · @Model.Session.StartsAt.ToString("ddd, d MMM · HH:mm")</span><h1>@Model.Session.Topic</h1><p>@Model.Session.CourseName · @(Model.Session.Venue ?? "Venue TBC")</p></div><a class="button button-ghost" asp-page="/Lecturer/Courses/Details" asp-route-id="@Model.Session.CourseId">Back to course</a></section>
+@if (TempData["StatusMessage"] is string statusMessage) { <div class="alert-success" role="status">@statusMessage</div> }
+@if (TempData["ErrorMessage"] is string errorMessage) { <div class="alert-error" role="alert">@errorMessage</div> }
+@if (!Model.Session.IsOpen)
+{
+    <section class="attendance-ready panel"><div class="attendance-ready-icon"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM15 14h2v2h-2zM18 14h2v6h-6v-2"/></svg></div><span class="eyebrow">Check-in is closed</span><h2>Ready to take attendance?</h2><p>Opening attendance creates a new six-digit fallback code and starts the configured ten-minute window.</p><form method="post" asp-page-handler="Open"><button class="button button-primary" type="submit">Open attendance</button></form></section>
+}
+else
+{
+    <section class="live-attendance-grid" data-live-attendance data-session-id="@Model.Session.Id" data-refresh-seconds="@Model.QrRefreshSeconds">
+        <article class="panel qr-panel"><div class="live-header"><div><span class="live-badge"><i></i>Live</span><h2>Scan to check in</h2></div><div class="countdown" data-countdown data-closes-at="@Model.Session.ClosesAt?.ToUniversalTime().ToString("O")">--:--</div></div><div class="qr-frame"><img data-qr-image src="?handler=Qr&id=@Model.Session.Id&t=@DateTimeOffset.UtcNow.ToUnixTimeSeconds()" alt="QR code for this lecture's attendance check-in" /></div><p class="qr-refresh-note">The secure QR code refreshes automatically.</p><div class="fallback-code"><span>Camera unavailable?</span><strong>@Model.FallbackCode</strong><small>Enter this code from the student check-in page.</small></div><form method="post" asp-page-handler="Close"><button class="button button-ghost danger-button" type="submit">Close attendance</button></form></article>
+        <article class="panel live-roster-panel"><div class="panel-header"><div><span class="eyebrow">Live register</span><h2><span data-checked-count>@Model.Roster.Count(item => item.CheckedIn)</span> of <span data-total-count>@Model.Roster.Count</span> checked in</h2></div><span class="status-pill" data-percentage>@(Model.Roster.Count == 0 ? 0 : Math.Round(Model.Roster.Count(item => item.CheckedIn) * 100d / Model.Roster.Count))%</span></div><div class="live-progress"><span data-progress style="width:@(Model.Roster.Count == 0 ? 0 : Model.Roster.Count(item => item.CheckedIn) * 100d / Model.Roster.Count)%"></span></div><div class="roster-list" data-roster-list>
+        @foreach (var student in Model.Roster) { <div class="roster-row" data-student-number="@student.StudentNumber"><span class="roster-avatar">@string.Concat(student.Name.Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => part[0]))</span><div><strong>@student.Name</strong><span>@student.StudentNumber</span></div>@if (student.CheckedIn) { <span class="attendance-chip">@student.Status</span> } else { <form method="post" asp-page-handler="MarkPresent"><input type="hidden" name="studentId" value="@student.StudentId"/><button class="table-action" type="submit">Mark present</button></form> }</div> }
+        </div></article>
+    </section>
+}
+@section Scripts { <script src="~/js/live-attendance.js" asp-append-version="true"></script> }

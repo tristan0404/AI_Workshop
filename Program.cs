@@ -3,6 +3,7 @@ using AI_Workshop.Models.Identity;
 using AI_Workshop.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
+using AI_Workshop.Configuration;
 
 var builder = WebApplication.CreateBuilder(args);
 
@@ -36,12 +37,20 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.ExpireTimeSpan = TimeSpan.FromHours(8);
 });
 
+builder.Services.AddAuthorizationBuilder()
+    .AddPolicy(RoleNames.Student, policy => policy.RequireRole(RoleNames.Student))
+    .AddPolicy(RoleNames.Lecturer, policy => policy.RequireRole(RoleNames.Lecturer));
+
 builder.Services.AddRazorPages(options =>
 {
     options.Conventions.AuthorizeFolder("/Student", RoleNames.Student);
     options.Conventions.AuthorizeFolder("/Lecturer", RoleNames.Lecturer);
 });
 builder.Services.AddProblemDetails();
+builder.Services.AddSingleton<InstitutionTimeService>();
+builder.Services.Configure<AttendanceOptions>(builder.Configuration.GetSection(AttendanceOptions.SectionName));
+builder.Services.AddScoped<AttendanceTokenService>();
+builder.Services.AddScoped<AttendanceService>();
 
 var app = builder.Build();
 
