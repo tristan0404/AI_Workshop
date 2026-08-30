@@ -1,0 +1,45 @@
+@page
+@model RegisterModel
+@{
+    ViewData["Title"] = "Create student account";
+}
+
+<section class="auth-page">
+    <div class="auth-card">
+        <span class="eyebrow">Student access</span>
+        <h1>Create your account</h1>
+        <p>Use your institutional details. Lecturer access is assigned by the system administrator.</p>
+        <form method="post" asp-route-returnUrl="@Model.ReturnUrl">
+            <div asp-validation-summary="ModelOnly" class="validation-summary-errors" role="alert"></div>
+            <div class="field-group">
+                <label asp-for="Input.DisplayName"></label>
+                <input asp-for="Input.DisplayName" class="form-control" autocomplete="name" />
+                <span asp-validation-for="Input.DisplayName" class="field-error"></span>
+            </div>
+            <div class="field-group">
+                <label asp-for="Input.StudentNumber"></label>
+                <input asp-for="Input.StudentNumber" class="form-control" autocomplete="off" />
+                <span asp-validation-for="Input.StudentNumber" class="field-error"></span>
+            </div>
+            <div class="field-group">
+                <label asp-for="Input.Email"></label>
+                <input asp-for="Input.Email" class="form-control" autocomplete="email" />
+                <span asp-validation-for="Input.Email" class="field-error"></span>
+            </div>
+            <div class="field-group">
+                <label asp-for="Input.Password"></label>
+                <input asp-for="Input.Password" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="Input.Password" class="field-error"></span>
+            </div>
+            <div class="field-group">
+                <label asp-for="Input.ConfirmPassword"></label>
+                <input asp-for="Input.ConfirmPassword" class="form-control" autocomplete="new-password" />
+                <span asp-validation-for="Input.ConfirmPassword" class="field-error"></span>
+            </div>
+            <button type="submit" class="button button-primary auth-submit">Create student account</button>
+        </form>
+        <p class="auth-switch">Already registered? <a asp-page="./Login" asp-route-returnUrl="@Model.ReturnUrl">Sign in</a></p>
+    </div>
+</section>
+
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

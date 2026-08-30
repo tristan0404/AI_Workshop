@@ -1,0 +1,37 @@
+@page
+@model IndexModel
+@{ ViewData["Title"] = "Overview"; }
+<section class="page-heading">
+    <div><span class="eyebrow">@Model.TodayLabel</span><h1>@Model.Greeting</h1><p>@Model.Introduction</p></div>
+    @if (Model.IsLecturer)
+    { <button class="button button-primary" type="button" disabled title="Available in Phase 2"><svg viewBox="0 0 24 24"><path d="M12 5v14M5 12h14"/></svg>New lecture</button> }
+    else if (Model.IsStudent)
+    { <button class="button button-primary" type="button" disabled title="Available in Phase 3"><svg viewBox="0 0 24 24"><path d="M4 4h6v6H4zM14 4h6v6h-6zM4 14h6v6H4zM15 14h2v2h-2zM18 14h2v6h-6v-2"/></svg>Check in</button> }
+    else
+    { <a class="button button-primary" asp-area="Identity" asp-page="/Account/Login">Sign in to continue</a> }
+</section>
+<section class="metric-grid" aria-label="Workspace summary">
+    <article class="metric-card metric-card-featured"><div class="metric-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></div><div><span>Attendance rate</span><strong>—</strong><small>Available once sessions begin</small></div></article>
+    <article class="metric-card"><div class="metric-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></div><div><span>Lecture sessions</span><strong>0</strong><small>No sessions recorded yet</small></div></article>
+    <article class="metric-card"><div class="metric-icon"><svg viewBox="0 0 24 24"><path d="M16 19v-1.5a3.5 3.5 0 0 0-3.5-3.5h-5A3.5 3.5 0 0 0 4 17.5V19M10 10a3 3 0 1 0 0-6 3 3 0 0 0 0 6ZM16 11a2.5 2.5 0 1 0 0-5M17 14a3 3 0 0 1 3 3v2"/></svg></div><div><span>@(Model.IsLecturer ? "Students" : "Enrolments")</span><strong>0</strong><small>Course setup comes next</small></div></article>
+    <article class="metric-card"><div class="metric-icon"><svg viewBox="0 0 24 24"><path d="M6 4h12a2 2 0 0 1 2 2v9a2 2 0 0 1-2 2h-7l-4 3v-3H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2Z"/></svg></div><div><span>Open queries</span><strong>0</strong><small>Nothing needs attention</small></div></article>
+</section>
+<section class="dashboard-grid">
+    <article class="panel activity-panel">
+        <div class="panel-header"><div><span class="eyebrow">Getting started</span><h2>Your workspace checklist</h2></div><span class="status-pill">1 of 4 ready</span></div>
+        <div class="checklist">
+            <div class="checklist-row is-complete"><span class="check-icon"><svg viewBox="0 0 24 24"><path d="m7 12 3 3 7-7"/></svg></span><div><strong>Secure account foundation</strong><span>Individual authentication and roles are configured.</span></div><span>Complete</span></div>
+            <div class="checklist-row"><span class="step-number">2</span><div><strong>Create your first course</strong><span>Set up a module and assign its lecturer.</span></div><span>Phase 2</span></div>
+            <div class="checklist-row"><span class="step-number">3</span><div><strong>Add students</strong><span>Import or enrol the class list.</span></div><span>Phase 2</span></div>
+            <div class="checklist-row"><span class="step-number">4</span><div><strong>Run a check-in</strong><span>Open the rotating QR attendance window.</span></div><span>Phase 3</span></div>
+        </div>
+    </article>
+    <aside class="panel account-panel">
+        <div class="panel-header"><div><span class="eyebrow">System</span><h2>Foundation status</h2></div></div>
+        <dl class="system-list"><div><dt>Application</dt><dd><span class="status-dot"></span>Operational</dd></div><div><dt>Authentication</dt><dd>Individual accounts</dd></div><div><dt>Your access</dt><dd>@Model.RoleLabel</dd></div><div><dt>Data store</dt><dd>SQLite</dd></div></dl>
+        @if (!User.Identity?.IsAuthenticated ?? true)
+        { <div class="callout"><strong>Ready to explore?</strong><p>Use a seeded demo account to preview the role-aware workspace.</p><a asp-area="Identity" asp-page="/Account/Login">Sign in <span>→</span></a></div> }
+        else
+        { <div class="callout"><strong>Everything is ready.</strong><p>Your account is secured and the next phase can add academic data.</p></div> }
+    </aside>
+</section>

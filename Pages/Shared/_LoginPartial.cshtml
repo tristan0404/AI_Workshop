@@ -1,0 +1,21 @@
+@using AI_Workshop.Models.Identity
+@using Microsoft.AspNetCore.Identity
+@inject SignInManager<ApplicationUser> SignInManager
+@inject UserManager<ApplicationUser> UserManager
+@if (SignInManager.IsSignedIn(User))
+{
+    var currentUser = await UserManager.GetUserAsync(User);
+    var initials = string.Join(string.Empty, (currentUser?.DisplayName ?? currentUser?.Email ?? "User").Split(' ', StringSplitOptions.RemoveEmptyEntries).Take(2).Select(part => char.ToUpperInvariant(part[0])));
+    var role = User.IsInRole(RoleNames.Lecturer) ? "Lecturer" : "Student";
+    <div class="account-menu">
+        <div class="avatar" aria-hidden="true">@initials</div>
+        <div class="account-copy"><strong>@(currentUser?.DisplayName ?? "Account")</strong><span>@role</span></div>
+        <form asp-area="Identity" asp-page="/Account/Logout" asp-route-returnUrl="/" method="post">
+            <button class="sign-out-button" type="submit" title="Sign out" aria-label="Sign out"><svg viewBox="0 0 24 24"><path d="M9 4H5.5A1.5 1.5 0 0 0 4 5.5v13A1.5 1.5 0 0 0 5.5 20H9M14 8l4 4-4 4M18 12H8"/></svg></button>
+        </form>
+    </div>
+}
+else
+{
+    <div class="auth-actions"><a class="button button-ghost" asp-area="Identity" asp-page="/Account/Login">Sign in</a><a class="button button-primary" asp-area="Identity" asp-page="/Account/Register">Create account</a></div>
+}
