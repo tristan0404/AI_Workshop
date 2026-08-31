@@ -49,8 +49,11 @@ builder.Services.AddRazorPages(options =>
 builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<InstitutionTimeService>();
 builder.Services.Configure<AttendanceOptions>(builder.Configuration.GetSection(AttendanceOptions.SectionName));
+builder.Services.Configure<AttendanceImportOptions>(builder.Configuration.GetSection(AttendanceImportOptions.SectionName));
 builder.Services.AddScoped<AttendanceTokenService>();
 builder.Services.AddScoped<AttendanceService>();
+builder.Services.AddScoped<IAttendanceSpreadsheetReader, AttendanceSpreadsheetReader>();
+builder.Services.AddScoped<AttendanceImportService>();
 
 var app = builder.Build();
 

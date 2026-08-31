@@ -1,0 +1,29 @@
+@page
+@model AI_Workshop.Pages.Lecturer.Imports.IndexModel
+@{ ViewData["Title"] = "Import attendance"; }
+<section class="page-heading">
+    <div><span class="eyebrow">Historical records</span><h1>Import attendance</h1><p>Upload a CSV or Excel register, review every change, then commit it as one safe transaction.</p></div>
+    <a class="button button-ghost" asp-page-handler="Template">Download template</a>
+</section>
+<section class="import-grid">
+    <form method="post" enctype="multipart/form-data" class="panel form-panel import-upload">
+        <div class="panel-header import-panel-header"><div><span class="eyebrow">Step 1</span><h2>Choose your register</h2></div></div>
+        <div asp-validation-summary="ModelOnly" class="field-error"></div>
+        <div class="field-group"><label asp-for="Input.CourseId">Course</label><select asp-for="Input.CourseId" asp-items="Model.Courses" class="form-select"><option value="0">Select a course</option></select><span asp-validation-for="Input.CourseId" class="field-error"></span></div>
+        <div class="field-group"><label asp-for="Input.File">CSV or Excel file</label><input asp-for="Input.File" class="form-control" accept=".csv,.xlsx" /><span asp-validation-for="Input.File" class="field-error"></span><small>Maximum 2 MB. Comma- and semicolon-separated CSV files are supported; the first worksheet is used for Excel files.</small></div>
+        <div class="import-format"><strong>Expected layout</strong><code>Student Name | Student Number | 2026-02-10 | 2026-02-17</code><span>Use <b>1</b> for present and <b>0</b> for absent.</span></div>
+        <button class="button button-primary" type="submit">Validate and preview</button>
+    </form>
+    <aside class="panel import-guide">
+        <span class="eyebrow">Before uploading</span><h2>A clean import in three checks</h2>
+        <ol><li><strong>Check student numbers</strong><span>Known accounts are enrolled automatically; new students receive provisioned accounts.</span></li><li><strong>Use date headings</strong><span>Prefer YYYY-MM-DD so dates are never ambiguous.</span></li><li><strong>Preview safely</strong><span>No accounts, enrolments, or attendance records change until you confirm.</span></li></ol>
+    </aside>
+</section>
+<section class="panel data-panel import-history">
+    <div class="panel-header"><div><span class="eyebrow">Audit trail</span><h2>Recent imports</h2></div></div>
+    @if (Model.Imports.Count == 0) { <p class="inline-empty">No attendance files have been uploaded yet.</p> }
+    else { <div class="table-wrap"><table class="data-table"><thead><tr><th>File</th><th>Course</th><th>Uploaded</th><th>Records</th><th>Status</th><th></th></tr></thead><tbody>
+    @foreach (var item in Model.Imports) { <tr><td><strong>@item.FileName</strong></td><td>@item.CourseCode</td><td>@item.UploadedAtUtc.ToString("d MMM yyyy · HH:mm") UTC</td><td>@item.Records</td><td><span class="status-pill @(item.Errors > 0 ? "import-status-error" : "status-neutral")">@(item.Errors > 0 ? $"{item.Errors} errors" : item.Status.ToString())</span></td><td><a class="table-action" asp-page="Preview" asp-route-id="@item.Id">View →</a></td></tr> }
+    </tbody></table></div> }
+</section>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

@@ -15,6 +15,8 @@ public sealed class ApplicationUser : IdentityUser
     [StringLength(30)]
     public string? StudentNumber { get; set; }
 
+    public bool IsProvisioned { get; set; }
+
     public DateTime CreatedAtUtc { get; set; } = DateTime.UtcNow;
 
     public ICollection<CourseLecturer> TeachingAssignments { get; set; } = [];

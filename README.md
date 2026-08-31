@@ -1,5 +1,13 @@
 # Attendly
 
+## Phase 4: historical attendance imports
+
+Lecturers can import comma- or semicolon-separated `.csv` files and `.xlsx` attendance matrices from **Imports**. The required columns are `Student Name`, `Student Number` (or `Student No`), followed by date columns (`YYYY-MM-DD` or `YYYY/MM/DD`). Values are `1` (present) or `0` (absent). Every upload is validated and previewed before a single transactional confirmation.
+
+Confirmation automatically enrolls existing student accounts into the selected course. Students not yet in the system receive provisioned, passwordless accounts linked to their student numbers; they activate those records through normal registration instead of creating duplicate profiles.
+
+The Razor Pages project follows MVC separation: entities and import view models are in `Models`, `.cshtml` files are views, PageModels perform controller/request coordination, and parsing/validation/business rules are isolated in `Services`.
+
 Attendly is a role-based attendance register built with ASP.NET Core Razor Pages, Identity, EF Core, and SQLite.
 
 ## Implemented foundation

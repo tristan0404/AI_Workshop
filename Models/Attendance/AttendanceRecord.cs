@@ -4,7 +4,7 @@ using AI_Workshop.Models.Identity;
 namespace AI_Workshop.Models.Attendance;
 
 public enum AttendanceStatus { Present, Late, Absent, Excused }
-public enum AttendanceSource { QrCode, FallbackCode, Lecturer }
+public enum AttendanceSource { QrCode, FallbackCode, Lecturer, Import }
 
 public sealed class AttendanceRecord
 {

@@ -14,6 +14,9 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<LectureSession> LectureSessions => Set<LectureSession>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
+    public DbSet<AttendanceImportBatch> AttendanceImportBatches => Set<AttendanceImportBatch>();
+    public DbSet<AttendanceImportItem> AttendanceImportItems => Set<AttendanceImportItem>();
+    public DbSet<AttendanceImportError> AttendanceImportErrors => Set<AttendanceImportError>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -53,5 +56,26 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             .WithMany(user => user.AttendanceRecords)
             .HasForeignKey(record => record.StudentId)
             .OnDelete(DeleteBehavior.Restrict);
+
+        builder.Entity<AttendanceImportBatch>()
+            .HasIndex(batch => new { batch.LecturerId, batch.UploadedAtUtc });
+        builder.Entity<AttendanceImportBatch>()
+            .HasOne(batch => batch.Course)
+            .WithMany()
+            .HasForeignKey(batch => batch.CourseId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<AttendanceImportItem>()
+            .HasIndex(item => new { item.BatchId, item.StudentNumber, item.LectureDate })
+            .IsUnique();
+        builder.Entity<AttendanceImportItem>()
+            .HasOne(item => item.Batch)
+            .WithMany(batch => batch.Items)
+            .HasForeignKey(item => item.BatchId)
+            .OnDelete(DeleteBehavior.Cascade);
+        builder.Entity<AttendanceImportError>()
+            .HasOne(error => error.Batch)
+            .WithMany(batch => batch.Errors)
+            .HasForeignKey(error => error.BatchId)
+            .OnDelete(DeleteBehavior.Cascade);
     }
 }
