@@ -19,4 +19,10 @@
     <PackageReference Include="SQLitePCLRaw.bundle_e_sqlite3" Version="2.1.12" />
   </ItemGroup>
 
+  <ItemGroup>
+    <Compile Remove="Attendly.QualityTests/**/*.cs" />
+    <Content Remove="Attendly.QualityTests/**" />
+    <None Remove="Attendly.QualityTests/**" />
+  </ItemGroup>
+
 </Project>

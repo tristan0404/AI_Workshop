@@ -17,6 +17,8 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<AttendanceImportBatch> AttendanceImportBatches => Set<AttendanceImportBatch>();
     public DbSet<AttendanceImportItem> AttendanceImportItems => Set<AttendanceImportItem>();
     public DbSet<AttendanceImportError> AttendanceImportErrors => Set<AttendanceImportError>();
+    public DbSet<AttendanceQuery> AttendanceQueries => Set<AttendanceQuery>();
+    public DbSet<AttendanceChangeLog> AttendanceChangeLogs => Set<AttendanceChangeLog>();
 
     protected override void OnModelCreating(ModelBuilder builder)
     {
@@ -77,5 +79,41 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
             .WithMany(batch => batch.Errors)
             .HasForeignKey(error => error.BatchId)
             .OnDelete(DeleteBehavior.Cascade);
+
+        builder.Entity<AttendanceQuery>()
+            .HasIndex(query => new { query.LectureSessionId, query.StudentId, query.Status });
+        builder.Entity<AttendanceQuery>()
+            .HasOne(query => query.Student)
+            .WithMany()
+            .HasForeignKey(query => query.StudentId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<AttendanceQuery>()
+            .HasOne(query => query.ReviewedByLecturer)
+            .WithMany()
+            .HasForeignKey(query => query.ReviewedByLecturerId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<AttendanceQuery>()
+            .HasOne(query => query.AttendanceRecord)
+            .WithMany(record => record.Queries)
+            .HasForeignKey(query => query.AttendanceRecordId)
+            .OnDelete(DeleteBehavior.SetNull);
+
+        builder.Entity<AttendanceChangeLog>()
+            .HasIndex(log => new { log.AttendanceRecordId, log.ChangedAtUtc });
+        builder.Entity<AttendanceChangeLog>()
+            .HasOne(log => log.AttendanceRecord)
+            .WithMany(record => record.ChangeLogs)
+            .HasForeignKey(log => log.AttendanceRecordId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<AttendanceChangeLog>()
+            .HasOne(log => log.ChangedByLecturer)
+            .WithMany()
+            .HasForeignKey(log => log.ChangedByLecturerId)
+            .OnDelete(DeleteBehavior.Restrict);
+        builder.Entity<AttendanceChangeLog>()
+            .HasOne(log => log.AttendanceQuery)
+            .WithMany()
+            .HasForeignKey(log => log.AttendanceQueryId)
+            .OnDelete(DeleteBehavior.SetNull);
     }
 }

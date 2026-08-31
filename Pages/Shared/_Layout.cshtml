@@ -1,9 +1,21 @@
 @using AI_Workshop.Models.Identity
+@using AI_Workshop.Models.Attendance
+@using Microsoft.AspNetCore.Identity
+@using Microsoft.EntityFrameworkCore
+@inject AI_Workshop.Data.ApplicationDbContext LayoutDb
+@inject UserManager<AI_Workshop.Models.Identity.ApplicationUser> LayoutUserManager
 @{
     var currentPath = Context.Request.Path.Value ?? string.Empty;
     var isOverview = currentPath.Equals("/Dashboard", StringComparison.OrdinalIgnoreCase);
     var isCourses = currentPath.Contains("/Courses", StringComparison.OrdinalIgnoreCase);
     var isImports = currentPath.Contains("/Lecturer/Imports", StringComparison.OrdinalIgnoreCase);
+    var isQueries = currentPath.Contains("/Lecturer/Queries", StringComparison.OrdinalIgnoreCase);
+    var openQueryCount = 0;
+    if (User.IsInRole(RoleNames.Lecturer))
+    {
+        var lecturerId = LayoutUserManager.GetUserId(User)!;
+        openQueryCount = await LayoutDb.AttendanceQueries.CountAsync(query => query.LectureSession.Course.Lecturers.Any(link => link.LecturerId == lecturerId) && (query.Status == AttendanceQueryStatus.Submitted || query.Status == AttendanceQueryStatus.UnderReview));
+    }
 }
 <!DOCTYPE html>
 <html lang="en">
@@ -37,11 +49,22 @@
                 else
                 { <span class="side-nav-link is-disabled" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M7.5 19.5v-15h9v15M4 19.5h16M10 8h4M10 12h4"/></svg>Courses</span> }
                 @if (User.IsInRole(RoleNames.Lecturer)) { <a class="side-nav-link @(isImports ? "active" : "")" asp-page="/Lecturer/Imports/Index"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 3v12M7.5 10.5 12 15l4.5-4.5M4 19.5h16"/></svg>Imports</a> }
-                <span class="side-nav-link is-disabled" aria-disabled="true"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Reports<span class="soon-badge">Soon</span></span>
+                @if (User.IsInRole(RoleNames.Lecturer))
+                {
+                    <a class="side-nav-link @(isQueries ? "active" : "")" asp-page="/Lecturer/Queries/Index">
+                        <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M5 5h14v10H9l-4 4V5Z"/><path d="M9 9h6M9 12h4"/></svg>
+                        <span>Queries</span>
+                        @if (openQueryCount > 0)
+                        {
+                            <span class="nav-count-badge">@openQueryCount</span>
+                        }
+                    </a>
+                }
+                <a class="side-nav-link" asp-page="/Dashboard" asp-fragment="analytics"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg>Reports</a>
             </nav>
             <div class="sidebar-footer">
                 <a class="side-nav-link" asp-area="" asp-page="/Privacy"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8.25"/><path d="M12 10.75v5M12 7.75v.25"/></svg>Privacy</a>
-                <div class="phase-note"><span class="phase-dot"></span><div><strong>Historical imports</strong><span>Phase 4 of 7</span></div></div>
+                <div class="phase-note"><span class="phase-dot"></span><div><strong>Analytics dashboards</strong><span>Phase 6 of 7</span></div></div>
             </div>
         </aside>
         <div class="app-main">

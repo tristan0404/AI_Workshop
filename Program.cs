@@ -48,12 +48,25 @@ builder.Services.AddRazorPages(options =>
 });
 builder.Services.AddProblemDetails();
 builder.Services.AddSingleton<InstitutionTimeService>();
-builder.Services.Configure<AttendanceOptions>(builder.Configuration.GetSection(AttendanceOptions.SectionName));
-builder.Services.Configure<AttendanceImportOptions>(builder.Configuration.GetSection(AttendanceImportOptions.SectionName));
+builder.Services.AddOptions<AttendanceOptions>()
+    .Bind(builder.Configuration.GetSection(AttendanceOptions.SectionName))
+    .ValidateDataAnnotations()
+    .Validate(options => options.LateAfterMinutes < options.WindowMinutes,
+        "Attendance:LateAfterMinutes must be shorter than Attendance:WindowMinutes.")
+    .ValidateOnStart();
+builder.Services.AddOptions<AttendanceImportOptions>()
+    .Bind(builder.Configuration.GetSection(AttendanceImportOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
+builder.Services.AddOptions<AttendanceReportingOptions>()
+    .Bind(builder.Configuration.GetSection(AttendanceReportingOptions.SectionName))
+    .ValidateDataAnnotations()
+    .ValidateOnStart();
 builder.Services.AddScoped<AttendanceTokenService>();
 builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<IAttendanceSpreadsheetReader, AttendanceSpreadsheetReader>();
 builder.Services.AddScoped<AttendanceImportService>();
+builder.Services.AddScoped<AttendanceReviewService>();
 
 var app = builder.Build();
 
@@ -65,6 +78,15 @@ if (!app.Environment.IsDevelopment())
 }
 
 app.UseHttpsRedirection();
+
+app.Use(async (context, next) =>
+{
+    context.Response.Headers.XContentTypeOptions = "nosniff";
+    context.Response.Headers.XFrameOptions = "DENY";
+    context.Response.Headers["Referrer-Policy"] = "strict-origin-when-cross-origin";
+    context.Response.Headers.Append("Permissions-Policy", "camera=(), microphone=(), geolocation=()");
+    await next();
+});
 
 app.UseRouting();
 

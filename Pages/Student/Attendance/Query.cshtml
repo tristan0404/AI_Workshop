@@ -1,0 +1,12 @@
+@page
+@model AI_Workshop.Pages.Student.Attendance.QueryModel
+@{ ViewData["Title"] = "Query attendance"; }
+<section class="page-heading"><div><span class="eyebrow">@Model.Session.CourseCode · @Model.Session.StartsAt.ToString("d MMM yyyy")</span><h1>Query attendance</h1><p>@Model.Session.Topic · Current status: @(Model.Session.CurrentStatus?.ToString() ?? "Not recorded")</p></div><a class="button button-ghost" asp-page="Index">← Attendance history</a></section>
+<form method="post" enctype="multipart/form-data" class="panel form-panel query-form">
+    <div asp-validation-summary="ModelOnly" class="field-error"></div>
+    <div class="field-group"><label asp-for="Input.RequestedStatus"></label><select asp-for="Input.RequestedStatus" asp-items="Html.GetEnumSelectList<AI_Workshop.Models.Attendance.AttendanceStatus>()" class="form-select"></select></div>
+    <div class="field-group"><label asp-for="Input.Explanation"></label><textarea asp-for="Input.Explanation" class="form-control" rows="6" placeholder="Explain what happened and why the record should change."></textarea><span asp-validation-for="Input.Explanation" class="field-error"></span></div>
+    <div class="field-group"><label asp-for="Input.Evidence"></label><input asp-for="Input.Evidence" class="form-control" accept=".pdf,.jpg,.jpeg,.png" /><small>Optional PDF, JPG, or PNG. Maximum 2 MB.</small></div>
+    <div class="form-actions"><a class="button button-ghost" asp-page="Index">Cancel</a><button class="button button-primary" type="submit">Submit query</button></div>
+</form>
+@section Scripts { <partial name="_ValidationScriptsPartial" /> }

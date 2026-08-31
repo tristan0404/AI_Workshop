@@ -17,4 +17,6 @@ public sealed class AttendanceRecord
     public AttendanceSource Source { get; set; }
     public DateTime CheckedInAtUtc { get; set; } = DateTime.UtcNow;
     public bool RequiresReview { get; set; }
+    public ICollection<AttendanceQuery> Queries { get; set; } = [];
+    public ICollection<AttendanceChangeLog> ChangeLogs { get; set; } = [];
 }

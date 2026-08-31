@@ -1,0 +1,7 @@
+@page
+@model AI_Workshop.Pages.Student.Attendance.QueriesModel
+@{ ViewData["Title"] = "My attendance queries"; }
+<section class="page-heading"><div><span class="eyebrow">Corrections</span><h1>My attendance queries</h1><p>Track lecturer decisions and responses to your submitted queries.</p></div><a class="button button-ghost" asp-page="Index">← Attendance history</a></section>
+@if (TempData["StatusMessage"] is string message) { <div class="alert-success">@message</div> }
+@if (Model.Queries.Count == 0) { <section class="empty-state panel"><div class="empty-icon">?</div><h2>No queries submitted</h2><p>If an attendance record is incorrect, open it from your attendance history.</p><a class="button button-primary" asp-page="Index">View attendance</a></section> }
+else { <section class="query-card-list">@foreach (var query in Model.Queries) { <article class="panel query-card"><div class="query-card-header"><div><span class="eyebrow">@query.CourseCode · @query.LectureDate.ToString("d MMM yyyy")</span><h2>@query.Topic</h2></div><span class="status-pill query-status-@query.Status.ToString().ToLowerInvariant()">@query.Status</span></div><dl><div><dt>Requested status</dt><dd>@query.RequestedStatus</dd></div><div><dt>Submitted</dt><dd>@query.SubmittedAt.ToString("d MMM yyyy · HH:mm")</dd></div></dl><p class="query-explanation">@query.Explanation</p>@if (!string.IsNullOrWhiteSpace(query.LecturerResponse)) { <div class="lecturer-response"><strong>Lecturer response</strong><p>@query.LecturerResponse</p></div> }</article> }</section> }

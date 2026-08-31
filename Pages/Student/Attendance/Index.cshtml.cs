@@ -22,10 +22,15 @@ public sealed class IndexModel(ApplicationDbContext db, UserManager<ApplicationU
     {
         var userId = userManager.GetUserId(User)!;
         Courses = await db.Enrollments.Where(item => item.StudentId == userId).OrderBy(item => item.Course.Code).Select(item => new SelectListItem(item.Course.Code, item.CourseId.ToString())).ToListAsync();
-        var query = db.AttendanceRecords.AsNoTracking().Where(item => item.StudentId == userId);
-        if (CourseId is not null) query = query.Where(item => item.LectureSession.CourseId == CourseId);
-        var data = await query.OrderByDescending(item => item.LectureSession.StartsAtUtc).Select(item => new { item.Id, item.LectureSession.Course.Code, item.LectureSession.Topic, item.LectureSession.StartsAtUtc, item.Status, item.Source, item.CheckedInAtUtc }).ToListAsync();
-        Records = data.Select(item => new AttendanceRow(item.Id, item.Code, item.Topic, institutionTime.ToLocal(item.StartsAtUtc), item.Status, item.Source, institutionTime.ToLocal(item.CheckedInAtUtc))).ToList();
+        var query = db.LectureSessions.AsNoTracking().Where(item => item.StartsAtUtc <= DateTime.UtcNow && item.Status != Models.Academic.LectureSessionStatus.Cancelled && item.Course.Enrollments.Any(link => link.StudentId == userId));
+        if (CourseId is not null) query = query.Where(item => item.CourseId == CourseId);
+        var data = await query.OrderByDescending(item => item.StartsAtUtc).Select(item => new
+        {
+            item.Id, item.Course.Code, item.Topic, item.StartsAtUtc,
+            Record = item.AttendanceRecords.Where(record => record.StudentId == userId).Select(record => new { record.Status, record.Source, record.CheckedInAtUtc }).FirstOrDefault(),
+            LatestQuery = db.AttendanceQueries.Where(value => value.LectureSessionId == item.Id && value.StudentId == userId).OrderByDescending(value => value.SubmittedAtUtc).Select(value => (AttendanceQueryStatus?)value.Status).FirstOrDefault()
+        }).ToListAsync();
+        Records = data.Select(item => new AttendanceRow(item.Id, item.Code, item.Topic, institutionTime.ToLocal(item.StartsAtUtc), item.Record?.Status, item.Record?.Source, item.Record is null ? null : institutionTime.ToLocal(item.Record.CheckedInAtUtc), item.LatestQuery)).ToList();
     }
-    public sealed record AttendanceRow(int Id, string CourseCode, string Topic, DateTime LectureDate, AttendanceStatus Status, AttendanceSource Source, DateTime CheckedInAt);
+    public sealed record AttendanceRow(int SessionId, string CourseCode, string Topic, DateTime LectureDate, AttendanceStatus? Status, AttendanceSource? Source, DateTime? CheckedInAt, AttendanceQueryStatus? QueryStatus);
 }
