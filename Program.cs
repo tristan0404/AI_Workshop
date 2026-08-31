@@ -67,6 +67,7 @@ builder.Services.AddScoped<AttendanceService>();
 builder.Services.AddScoped<IAttendanceSpreadsheetReader, AttendanceSpreadsheetReader>();
 builder.Services.AddScoped<AttendanceImportService>();
 builder.Services.AddScoped<AttendanceReviewService>();
+builder.Services.AddScoped<OfficeHoursService>();
 
 var app = builder.Build();
 

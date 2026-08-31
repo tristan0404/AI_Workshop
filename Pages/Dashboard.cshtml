@@ -1,22 +1,96 @@
 @page "/Dashboard"
-@using System.Text.Json
 @model AI_Workshop.Pages.DashboardModel
-@{ ViewData["Title"] = "Overview"; var jsonOptions = new JsonSerializerOptions(JsonSerializerDefaults.Web); }
-<section class="page-heading dashboard-heading">
-    <div><span class="eyebrow">@Model.TodayLabel</span><h1 class="text-type" data-text-type data-typing-speed="55" data-initial-delay="180" aria-label="@Model.Greeting"><span class="text-type__content" aria-hidden="true">@Model.Greeting</span><span class="text-type__cursor" aria-hidden="true">_</span></h1><p>@Model.Introduction</p></div>
-    @if (Model.IsLecturer) { <a class="button button-primary" asp-page="/Lecturer/Attendance/Index">Open register</a> }
-    else { <a class="button button-primary" asp-page="/Student/CheckIn">Check in</a> }
+@{ ViewData["Title"] = "Overview"; }
+<section class="overview-hero">
+    <div class="overview-welcome">
+        <span class="date-chip"><svg viewBox="0 0 24 24" aria-hidden="true"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg>@Model.TodayLabel</span>
+        <h1 class="text-type" data-text-type data-typing-speed="55" data-initial-delay="180" aria-label="@Model.Greeting"><span class="text-type__content" aria-hidden="true">@Model.Greeting</span><span class="text-type__cursor" aria-hidden="true">_</span></h1>
+        <p>@Model.Introduction</p>
+    </div>
+    @if (Model.LiveSession is not null)
+    {
+        <article class="live-session-card">
+            <div><span class="live-session-label"><i></i>Live session</span><h2>@Model.LiveSession.CourseCode · @Model.LiveSession.Topic</h2><p>@(Model.LiveSession.Venue ?? "Venue not specified") · Ends in @Model.LiveSession.MinutesRemaining min</p></div>
+            <a class="button button-dark" asp-page="@(Model.IsLecturer ? "/Lecturer/Attendance/Live" : "/Student/CheckIn")" asp-route-id="@(Model.IsLecturer ? Model.LiveSession.Id : null)">@(Model.IsLecturer ? "Open register" : "Check in") <span>→</span></a>
+        </article>
+    }
+    else
+    {
+        <article class="live-session-card live-session-empty">
+            <div><span class="live-session-label">Current status</span><h2>No attendance session is live</h2><p>@(Model.IsLecturer ? "Open a scheduled lecture when your class begins." : "Your lecturer’s live check-in will appear here.")</p></div>
+            <a class="button button-secondary" asp-page="@(Model.IsLecturer ? "/Lecturer/Attendance/Index" : "/Student/CheckIn")">@(Model.IsLecturer ? "View sessions" : "Enter a code")</a>
+        </article>
+    }
 </section>
-<section class="report-kpi-grid" aria-label="Attendance summary">
-    <article class="report-kpi report-kpi-primary"><span class="report-kpi-icon"><svg viewBox="0 0 24 24"><path d="M4 19V9M10 19V5M16 19v-7M22 19H2"/></svg></span><div><strong>@Model.AttendanceRate.ToString("0.#")%</strong><span>@(Model.IsLecturer ? "Average attendance" : "Your attendance")</span><small>@(Model.SessionCount == 0 ? "Waiting for attendance data" : $"Across {Model.SessionCount} past lectures")</small></div><a asp-page="@(Model.IsLecturer ? "/Lecturer/Attendance/Index" : "/Student/Attendance/Index")">Full attendance report <span>→</span></a></article>
-    <article class="report-kpi"><span class="report-kpi-icon"><svg viewBox="0 0 24 24"><rect x="4" y="5" width="16" height="15" rx="2"/><path d="M8 3v4M16 3v4M4 10h16"/></svg></span><div><strong>@Model.SessionCount</strong><span>Past lectures</span><small>Included in this dashboard</small></div><a asp-page="@(Model.IsLecturer ? "/Lecturer/Attendance/Index" : "/Student/Attendance/Index")">View lecture history <span>→</span></a></article>
-    <article class="report-kpi report-kpi-risk"><span class="report-kpi-icon"><svg viewBox="0 0 24 24"><path d="M12 4 3.5 19h17L12 4Z"/><path d="M12 9v4M12 16h.01"/></svg></span><div><strong>@Model.AtRiskCount</strong><span>@(Model.IsLecturer ? "Students at risk" : "Risk indicator")</span><small>Below @Model.AtRiskThreshold.ToString("0.#")% attendance</small></div><a asp-page="@(Model.IsLecturer ? "/Lecturer/Courses/Index" : "/Student/Attendance/Index")">Review attendance <span>→</span></a></article>
-    <article class="report-kpi report-kpi-dark"><span class="report-kpi-icon"><svg viewBox="0 0 24 24"><path d="M5 5h14v10H9l-4 4V5Z"/><path d="M9 9h6M9 12h4"/></svg></span><div><strong>@Model.OpenQueryCount</strong><span>Open queries</span><small>@(Model.OpenQueryCount == 0 ? "Nothing needs attention" : "Awaiting a decision")</small></div><a asp-page="@(Model.IsLecturer ? "/Lecturer/Queries/Index" : "/Student/Attendance/Queries")">Open query centre <span>→</span></a></article>
+
+<section class="overview-dashboard">
+    <div class="overview-side-column">
+        <article class="overview-card upcoming-card">
+            <header><div><span class="eyebrow">Your day</span><h2>Up next</h2></div>@if (Model.IsLecturer) { <button class="icon-button office-hours-trigger" type="button" data-office-hours-open aria-haspopup="dialog"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 5v14M5 12h14"/></svg><span class="sr-only">Add office hours</span></button> }</header>
+            @if (Model.Upcoming.Count > 0)
+            {
+                <ol class="upcoming-list">
+                    @foreach (var item in Model.Upcoming)
+                    {
+                        <li><time datetime="@item.StartsAt.ToString("s")"><strong>@item.StartsAt.ToString("HH:mm")</strong><span>@item.StartsAt.ToString("ddd")</span></time><div><strong>@item.Title</strong><span>@item.Subtitle</span></div></li>
+                    }
+                </ol>
+            }
+            else
+            {
+                <div class="compact-empty"><strong>Your schedule is clear</strong><span>No upcoming lectures are currently scheduled.</span></div>
+            }
+            @if (Model.IsLecturer)
+            {
+                <div class="office-hours-placeholder"><span class="office-hours-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="8"/><path d="M12 8v4l2.5 1.5"/></svg></span><div><strong>Add office hours</strong><span>Publish times when students can meet with you.</span></div><button class="text-action" type="button" data-office-hours-open>Set hours →</button></div>
+                @if (Model.OfficeHoursSlots.Count > 0)
+                {
+                    <div class="office-hours-slots" aria-label="Published office hours">
+                        @foreach (var slot in Model.OfficeHoursSlots)
+                        {
+                            <div><span><strong>@slot.DayOfWeek · @slot.StartsAt.ToString("HH:mm")–@slot.EndsAt.ToString("HH:mm")</strong><small>@slot.Location</small></span><form method="post" asp-page-handler="DeleteOfficeHours" asp-route-id="@slot.Id"><button type="submit" aria-label="Remove @slot.DayOfWeek office hours">Remove</button></form></div>
+                        }
+                    </div>
+                }
+            }
+        </article>
+
+        <article class="overview-alert-card @(Model.AtRiskCount > 0 ? "has-alert" : "")">
+            <span class="overview-alert-icon"><svg viewBox="0 0 24 24" aria-hidden="true"><path d="M12 4 3.5 19h17L12 4Z"/><path d="M12 9v4M12 16h.01"/></svg></span>
+            <strong>@Model.AtRiskCount</strong>
+            <span>@(Model.IsLecturer ? "Students at risk" : "Attendance risk indicator")</span>
+            <small>@(Model.AtRiskCount == 0 ? "No attendance risks detected" : $"Below {Model.AtRiskThreshold:0.#}% attendance")</small>
+            <a asp-page="/Reports">Review in reports <span>→</span></a>
+        </article>
+    </div>
+
+    <div class="overview-main-column">
+        <article class="attendance-highlight">
+            <div><span class="attendance-highlight-label"><i><svg viewBox="0 0 24 24" aria-hidden="true"><path d="m5 15 4-4 3 3 6-7"/><path d="M14 7h4v4"/></svg></i>@(Model.IsLecturer ? "Average attendance" : "Your attendance")</span><strong>@Model.AttendanceRate.ToString("0.#")%</strong><p>@(Model.SessionCount == 0 ? "Attendance data will appear after your first lecture." : $"Across {Model.SessionCount} past lectures this semester")</p></div>
+            <div class="attendance-highlight-action"><svg class="summary-sparkline" viewBox="0 0 180 70" aria-hidden="true"><path d="M4 54 C28 37 39 52 58 36 S88 54 107 25 S135 48 151 31 S168 17 176 12"/><circle cx="176" cy="12" r="5"/></svg><a class="button button-light" asp-page="/Reports">Full report <span>→</span></a></div>
+        </article>
+
+        <article class="overview-card momentum-preview">
+            <header><div><span class="eyebrow">At a glance</span><h2>Attendance momentum</h2><p>Detailed trends, comparisons, and status breakdowns now live in Reports.</p></div><a class="text-action" asp-page="/Reports">Explore reports →</a></header>
+            <div class="momentum-visual" aria-hidden="true"><span style="--bar: 72%"></span><span style="--bar: 86%"></span><span style="--bar: 64%"></span><span style="--bar: 91%"></span><span style="--bar: 78%"></span><span style="--bar: 94%"></span><span style="--bar: 82%"></span></div>
+            <footer><span>@Model.OpenQueryCount open @(Model.OpenQueryCount == 1 ? "query" : "queries")</span><a asp-page="@(Model.IsLecturer ? "/Lecturer/Queries/Index" : "/Student/Attendance/Queries")">Open query centre</a></footer>
+        </article>
+    </div>
 </section>
-<section class="analytics-grid" id="analytics" data-dashboard-charts>
-    <article class="panel analytics-panel analytics-trend"><header class="analytics-header"><div><span class="eyebrow">Attendance momentum</span><h2>@(Model.IsLecturer ? "Lecture attendance trend" : "Your attendance trend")</h2></div><span class="chart-key"><i class="key-attended"></i>Attendance rate</span></header><div class="chart-stage" data-line-chart aria-label="Attendance rate trend"></div><script type="application/json" data-chart-data="line">@Html.Raw(JsonSerializer.Serialize(Model.Trend, jsonOptions))</script><table class="sr-only"><caption>Attendance trend data</caption><thead><tr><th>Lecture</th><th>Rate</th></tr></thead><tbody>@foreach (var point in Model.Trend) { <tr><td>@point.Label · @point.Detail</td><td>@point.Value%</td></tr> }</tbody></table></article>
-    <article class="panel analytics-panel"><header class="analytics-header"><div><span class="eyebrow">Comparison</span><h2>@(Model.IsLecturer ? "Recent lectures" : "Attendance by course")</h2></div><div class="chart-legend"><span class="chart-key"><i class="key-attended"></i>Attended</span><span class="chart-key"><i class="key-missed"></i>Missed</span></div></header><div class="chart-stage" data-bar-chart aria-label="Attended and missed comparison"></div><script type="application/json" data-chart-data="bar">@Html.Raw(JsonSerializer.Serialize(Model.Bars, jsonOptions))</script></article>
-    <article class="panel analytics-panel"><header class="analytics-header"><div><span class="eyebrow">Status mix</span><h2>Attendance breakdown</h2></div></header><div class="donut-layout"><div class="chart-stage donut-stage" data-donut-chart aria-label="Attendance status breakdown"></div><div class="donut-legend" data-donut-legend></div></div><script type="application/json" data-chart-data="donut">@Html.Raw(JsonSerializer.Serialize(Model.Donut, jsonOptions))</script></article>
-    <article class="panel analytics-panel analytics-heatmap"><header class="analytics-header"><div><span class="eyebrow">Consistency map</span><h2>@(Model.IsLecturer ? "Daily attendance intensity" : "Your attendance calendar")</h2></div><span class="chart-key">Last 12 months</span></header><div class="heatmap-scroll"><div class="chart-stage heatmap-stage" data-heatmap-chart aria-label="Attendance heatmap"></div></div><div class="heatmap-legend"><span>Less</span><i data-level="0"></i><i data-level="1"></i><i data-level="2"></i><i data-level="3"></i><i data-level="4"></i><span>More</span></div><script type="application/json" data-chart-data="heatmap">@Html.Raw(JsonSerializer.Serialize(Model.Heatmap, jsonOptions))</script></article>
-</section>
-@section Scripts { <script src="~/js/dashboard-charts.js" asp-append-version="true"></script> }
+@if (Model.IsLecturer)
+{
+    <dialog class="office-hours-dialog" data-office-hours-dialog data-open-on-load="@(!ViewData.ModelState.IsValid ? "true" : "false")" aria-labelledby="officeHoursTitle">
+        <form method="post" asp-page-handler="AddOfficeHours">
+            <header><div><span class="eyebrow">Availability</span><h2 id="officeHoursTitle">Add office hours</h2><p>Publish a weekly recurring time when students can find or meet with you.</p></div><button class="icon-button" type="button" data-office-hours-close aria-label="Close office hours"><svg viewBox="0 0 24 24"><path d="m6 6 12 12M18 6 6 18"/></svg></button></header>
+            <div asp-validation-summary="ModelOnly" class="dialog-validation"></div>
+            <div class="office-hours-form-preview">
+                <label><span asp-for="OfficeHoursInput.DayOfWeek"></span><select asp-for="OfficeHoursInput.DayOfWeek" asp-items="Html.GetEnumSelectList<DayOfWeek>()"></select></label>
+                <label><span asp-for="OfficeHoursInput.StartsAt"></span><input asp-for="OfficeHoursInput.StartsAt" type="time" /></label>
+                <label><span asp-for="OfficeHoursInput.EndsAt"></span><input asp-for="OfficeHoursInput.EndsAt" type="time" /></label>
+                <label class="office-hours-location"><span asp-for="OfficeHoursInput.Location"></span><input asp-for="OfficeHoursInput.Location" placeholder="Room 302 or meeting URL" /><span asp-validation-for="OfficeHoursInput.Location" class="field-error"></span></label>
+            </div>
+            <footer><span>Repeats weekly</span><button class="button button-secondary" type="button" data-office-hours-close>Cancel</button><button class="button button-primary" type="submit">Save office hours</button></footer>
+        </form>
+    </dialog>
+}
+@section Scripts { <partial name="_ValidationScriptsPartial" /><script src="~/js/overview.js" asp-append-version="true"></script> }

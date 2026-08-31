@@ -13,6 +13,7 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
     public DbSet<CourseLecturer> CourseLecturers => Set<CourseLecturer>();
     public DbSet<Enrollment> Enrollments => Set<Enrollment>();
     public DbSet<LectureSession> LectureSessions => Set<LectureSession>();
+    public DbSet<OfficeHour> OfficeHours => Set<OfficeHour>();
     public DbSet<AttendanceRecord> AttendanceRecords => Set<AttendanceRecord>();
     public DbSet<AttendanceImportBatch> AttendanceImportBatches => Set<AttendanceImportBatch>();
     public DbSet<AttendanceImportItem> AttendanceImportItems => Set<AttendanceImportItem>();
@@ -49,6 +50,14 @@ public sealed class ApplicationDbContext(DbContextOptions<ApplicationDbContext> 
 
         builder.Entity<LectureSession>()
             .HasIndex(session => new { session.CourseId, session.StartsAtUtc });
+
+        builder.Entity<OfficeHour>()
+            .HasIndex(officeHour => new { officeHour.LecturerId, officeHour.DayOfWeek, officeHour.StartsAt });
+        builder.Entity<OfficeHour>()
+            .HasOne(officeHour => officeHour.Lecturer)
+            .WithMany(lecturer => lecturer.OfficeHours)
+            .HasForeignKey(officeHour => officeHour.LecturerId)
+            .OnDelete(DeleteBehavior.Cascade);
 
         builder.Entity<AttendanceRecord>()
             .HasIndex(record => new { record.LectureSessionId, record.StudentId })

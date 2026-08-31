@@ -22,4 +22,5 @@ public sealed class ApplicationUser : IdentityUser
     public ICollection<CourseLecturer> TeachingAssignments { get; set; } = [];
     public ICollection<Enrollment> Enrollments { get; set; } = [];
     public ICollection<AttendanceRecord> AttendanceRecords { get; set; } = [];
+    public ICollection<OfficeHour> OfficeHours { get; set; } = [];
 }

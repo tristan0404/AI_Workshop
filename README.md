@@ -1,6 +1,6 @@
-# Attendly
+# Attend.dotnet
 
-Attendly is a role-based attendance register built with ASP.NET Core Razor Pages, Identity, Entity Framework Core, and SQLite. It combines secure QR check-in, spreadsheet migration, accountable corrections, and role-specific analytics in a responsive accounting-style interface.
+Attend.dotnet is a role-based attendance register built with ASP.NET Core Razor Pages, Identity, Entity Framework Core, and SQLite. It combines secure QR check-in, spreadsheet migration, accountable corrections, and role-specific analytics in a responsive accounting-style interface.
 
 ## Current status
 
@@ -36,6 +36,7 @@ Demo seeding is disabled in the base configuration and enabled only by `appsetti
 5. Import historical `.csv` or `.xlsx` matrices through preview and confirmation.
 6. Review student queries, approve or reject corrections, and inspect the audit history.
 7. Use the dashboard to compare sessions, courses, trends, status distribution, and at-risk attendance.
+8. Publish and manage weekly office hours from Overview so enrolled students can see upcoming availability.
 
 ### Student
 
@@ -44,6 +45,7 @@ Demo seeding is disabled in the base configuration and enabled only by `appsetti
 3. Review attendance history and filter it by course.
 4. Query a specific lecture, request a correction, optionally attach evidence, and track the outcome.
 5. Use the dashboard to monitor personal attendance and risk indicators.
+6. See upcoming office hours offered by lecturers teaching your enrolled courses.
 
 ## Innovative features
 
@@ -56,6 +58,7 @@ Demo seeding is disabled in the base configuration and enabled only by `appsetti
 - Evidence-backed attendance disputes with an immutable lecturer correction trail.
 - Role-specific dashboards built with dependency-free, accessible SVG and CSS charts.
 - At-risk indicators and a twelve-month consistency heatmap for early intervention.
+- Recurring lecturer office hours with overlap validation, ownership protection, and student visibility.
 
 ## Architecture and maintainability
 
@@ -97,6 +100,7 @@ The suite verifies:
 - Quoted and semicolon-delimited CSV parsing.
 - Duplicate attendance-query prevention and approval audit logging.
 - Rejection of invalid configuration ranges.
+- Office-hours recurrence, overlap prevention, and ownership-safe deletion.
 
 Before delivery, run:
 

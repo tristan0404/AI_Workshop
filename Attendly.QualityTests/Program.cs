@@ -19,6 +19,7 @@ var tests = new (string Name, Func<Task> Run)[]
     ("Attendance rejects unenrolled students and duplicate check-ins", TestAttendanceGuardsAsync),
     ("CSV reader handles quoted names and semicolon files", TestCsvReaderAsync),
     ("Attendance queries prevent duplicates and create an audit trail", TestAttendanceReviewAsync),
+    ("Office hours enforce recurrence, overlap, and ownership rules", TestOfficeHoursAsync),
     ("Attendance configuration rejects invalid ranges", TestConfigurationValidationAsync)
 };
 
@@ -107,6 +108,22 @@ static async Task TestAttendanceReviewAsync()
     var auditCount = await fixture.Db.AttendanceChangeLogs.CountAsync(item => item.AttendanceQueryId == queryId);
     Assert(query.Status == AttendanceQueryStatus.Approved && auditCount == 1,
         "Approving a query did not create exactly one audit entry.");
+}
+
+static async Task TestOfficeHoursAsync()
+{
+    await using var fixture = await AttendanceFixture.CreateAsync();
+    var service = new OfficeHoursService(fixture.Db);
+    var id = await service.CreateAsync(fixture.LecturerId, DayOfWeek.Monday, new TimeOnly(14, 0), new TimeOnly(16, 0),
+        "Room 302", CancellationToken.None);
+    await ExpectAsync<OfficeHoursException>(() => service.CreateAsync(fixture.LecturerId, DayOfWeek.Monday,
+        new TimeOnly(15, 0), new TimeOnly(17, 0), "Room 304", CancellationToken.None));
+    await ExpectAsync<OfficeHoursException>(() => service.DeleteAsync(id, "another-lecturer", CancellationToken.None));
+    var next = OfficeHoursService.NextOccurrence(DayOfWeek.Monday, new TimeOnly(14, 0),
+        new DateTime(2026, 8, 31, 15, 0, 0));
+    Assert(next == new DateTime(2026, 9, 7, 14, 0, 0), "A passed weekly slot did not roll forward seven days.");
+    await service.DeleteAsync(id, fixture.LecturerId, CancellationToken.None);
+    Assert(!await fixture.Db.OfficeHours.AnyAsync(), "The lecturer's office-hours slot was not removed.");
 }
 
 static Task TestConfigurationValidationAsync()

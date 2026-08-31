@@ -1,119 +1,162 @@
 using AI_Workshop.Configuration;
 using AI_Workshop.Data;
+using AI_Workshop.Models.Academic;
 using AI_Workshop.Models.Attendance;
 using AI_Workshop.Models.Identity;
 using AI_Workshop.Services;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Identity;
+using Microsoft.AspNetCore.Mvc;
 using Microsoft.AspNetCore.Mvc.RazorPages;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
+using System.ComponentModel.DataAnnotations;
 
 namespace AI_Workshop.Pages;
 
 [Authorize]
-public sealed class DashboardModel(UserManager<ApplicationUser> userManager, ApplicationDbContext db, InstitutionTimeService institutionTime, IOptions<AttendanceReportingOptions> reportingOptions) : PageModel
+public sealed class DashboardModel(UserManager<ApplicationUser> userManager, ApplicationDbContext db, InstitutionTimeService institutionTime,
+    IOptions<AttendanceReportingOptions> reportingOptions, OfficeHoursService officeHoursService) : PageModel
 {
+    [BindProperty] public OfficeHoursInputModel OfficeHoursInput { get; set; } = new();
     public bool IsLecturer { get; private set; }
-    public bool IsStudent { get; private set; }
     public string Greeting { get; private set; } = "Welcome to your workspace.";
     public string Introduction { get; private set; } = string.Empty;
     public string TodayLabel => DateTime.Now.ToString("dddd, d MMMM yyyy");
-    public int CourseCount { get; private set; }
     public int SessionCount { get; private set; }
-    public int PeopleCount { get; private set; }
     public int OpenQueryCount { get; private set; }
     public int AtRiskCount { get; private set; }
     public decimal AttendanceRate { get; private set; }
     public decimal AtRiskThreshold => reportingOptions.Value.AtRiskPercentage;
-    public IReadOnlyList<TrendPoint> Trend { get; private set; } = [];
-    public IReadOnlyList<BarPoint> Bars { get; private set; } = [];
-    public IReadOnlyList<DonutPoint> Donut { get; private set; } = [];
-    public IReadOnlyList<HeatPoint> Heatmap { get; private set; } = [];
+    public LiveSessionView? LiveSession { get; private set; }
+    public IReadOnlyList<UpcomingItem> Upcoming { get; private set; } = [];
+    public IReadOnlyList<OfficeHoursView> OfficeHoursSlots { get; private set; } = [];
+
+    public sealed class OfficeHoursInputModel
+    {
+        [EnumDataType(typeof(DayOfWeek)), Display(Name = "Day")]
+        public DayOfWeek DayOfWeek { get; set; } = DayOfWeek.Monday;
+        [DataType(DataType.Time), Display(Name = "Starts")]
+        public TimeOnly StartsAt { get; set; } = new(14, 0);
+        [DataType(DataType.Time), Display(Name = "Ends")]
+        public TimeOnly EndsAt { get; set; } = new(16, 0);
+        [Required, StringLength(200, MinimumLength = 2), Display(Name = "Location or meeting link")]
+        public string Location { get; set; } = string.Empty;
+    }
 
     public async Task OnGetAsync()
     {
         IsLecturer = User.IsInRole(RoleNames.Lecturer);
-        IsStudent = User.IsInRole(RoleNames.Student);
         var currentUser = await userManager.GetUserAsync(User);
         Greeting = $"Good {GetTimeOfDay()}, {GetGreetingName(currentUser?.DisplayName)}.";
-        Introduction = IsLecturer ? "Monitor participation, spot attendance risk, and act on student queries." : "Understand your attendance pattern and stay ahead of course requirements.";
+        Introduction = IsLecturer
+            ? "Manage today’s teaching, monitor participation, and act on student queries."
+            : "Keep up with today’s lectures, check in quickly, and stay on top of your attendance.";
         if (currentUser is null) return;
         if (IsLecturer) await LoadLecturerAsync(currentUser.Id);
-        else if (IsStudent) await LoadStudentAsync(currentUser.Id);
+        else if (User.IsInRole(RoleNames.Student)) await LoadStudentAsync(currentUser.Id);
+    }
+
+    public async Task<IActionResult> OnPostAddOfficeHoursAsync(CancellationToken cancellationToken)
+    {
+        if (!User.IsInRole(RoleNames.Lecturer)) return Forbid();
+        if (!ModelState.IsValid) { await OnGetAsync(); return Page(); }
+        try
+        {
+            await officeHoursService.CreateAsync(userManager.GetUserId(User)!, OfficeHoursInput.DayOfWeek,
+                OfficeHoursInput.StartsAt, OfficeHoursInput.EndsAt, OfficeHoursInput.Location, cancellationToken);
+            TempData["StatusMessage"] = "Office hours were published.";
+            return RedirectToPage();
+        }
+        catch (OfficeHoursException exception)
+        {
+            ModelState.AddModelError(string.Empty, exception.Message);
+            await OnGetAsync();
+            return Page();
+        }
+    }
+
+    public async Task<IActionResult> OnPostDeleteOfficeHoursAsync(int id, CancellationToken cancellationToken)
+    {
+        if (!User.IsInRole(RoleNames.Lecturer)) return Forbid();
+        try
+        {
+            await officeHoursService.DeleteAsync(id, userManager.GetUserId(User)!, cancellationToken);
+            TempData["StatusMessage"] = "Office hours were removed.";
+        }
+        catch (OfficeHoursException exception) { TempData["ErrorMessage"] = exception.Message; }
+        return RedirectToPage();
     }
 
     private async Task LoadLecturerAsync(string lecturerId)
     {
+        var now = DateTime.UtcNow;
         var courseIds = await db.CourseLecturers.Where(link => link.LecturerId == lecturerId).Select(link => link.CourseId).ToListAsync();
-        CourseCount = await db.Courses.CountAsync(course => courseIds.Contains(course.Id) && !course.IsArchived);
-        PeopleCount = await db.Enrollments.Where(link => courseIds.Contains(link.CourseId)).Select(link => link.StudentId).Distinct().CountAsync();
-        OpenQueryCount = await db.AttendanceQueries.CountAsync(query => courseIds.Contains(query.LectureSession.CourseId) && (query.Status == AttendanceQueryStatus.Submitted || query.Status == AttendanceQueryStatus.UnderReview));
-        var sessions = await db.LectureSessions.AsNoTracking().Where(session => courseIds.Contains(session.CourseId) && session.StartsAtUtc <= DateTime.UtcNow && session.Status != Models.Academic.LectureSessionStatus.Cancelled)
-            .OrderBy(session => session.StartsAtUtc).Select(session => new SessionData(session.Course.Code, session.Topic, session.StartsAtUtc,
-                session.Course.Enrollments.Count, session.AttendanceRecords.Count(record => record.Status == AttendanceStatus.Present),
-                session.AttendanceRecords.Count(record => record.Status == AttendanceStatus.Late), session.AttendanceRecords.Count(record => record.Status == AttendanceStatus.Absent),
-                session.AttendanceRecords.Count(record => record.Status == AttendanceStatus.Excused))).ToListAsync();
-        SessionCount = sessions.Count;
-        BuildSessionCharts(sessions);
+        OpenQueryCount = await db.AttendanceQueries.CountAsync(query => courseIds.Contains(query.LectureSession.CourseId) &&
+            (query.Status == AttendanceQueryStatus.Submitted || query.Status == AttendanceQueryStatus.UnderReview));
+        var live = await db.LectureSessions.AsNoTracking().Where(session => courseIds.Contains(session.CourseId) && session.AttendanceState == AttendanceWindowState.Open && session.AttendanceClosesAtUtc > now)
+            .OrderBy(session => session.AttendanceClosesAtUtc).Select(session => new { session.Id, session.Course.Code, session.Topic, session.Venue, session.AttendanceClosesAtUtc }).FirstOrDefaultAsync();
+        if (live is not null) LiveSession = new LiveSessionView(live.Id, live.Code, live.Topic, live.Venue, Math.Max(1, (int)Math.Ceiling((live.AttendanceClosesAtUtc!.Value - now).TotalMinutes)));
+        await LoadOfficeHoursAsync([lecturerId]);
+        Upcoming = await LoadUpcomingAsync(courseIds, now, OfficeHoursSlots);
 
+        var sessions = await db.LectureSessions.AsNoTracking().Where(session => courseIds.Contains(session.CourseId) && session.StartsAtUtc <= now && session.Status != LectureSessionStatus.Cancelled)
+            .Select(session => new { Enrolled = session.Course.Enrollments.Count, Attended = session.AttendanceRecords.Count(record => record.Status == AttendanceStatus.Present || record.Status == AttendanceStatus.Late) }).ToListAsync();
+        SessionCount = sessions.Count;
+        AttendanceRate = Percentage(sessions.Sum(value => value.Attended), sessions.Sum(value => value.Enrolled));
         var rates = await db.Enrollments.AsNoTracking().Where(link => courseIds.Contains(link.CourseId)).Select(link => new
         {
             link.StudentId,
-            Sessions = link.Course.LectureSessions.Count(session => session.StartsAtUtc <= DateTime.UtcNow && session.Status != Models.Academic.LectureSessionStatus.Cancelled),
+            Sessions = link.Course.LectureSessions.Count(session => session.StartsAtUtc <= now && session.Status != LectureSessionStatus.Cancelled),
             Attended = link.Course.LectureSessions.SelectMany(session => session.AttendanceRecords).Count(record => record.StudentId == link.StudentId && (record.Status == AttendanceStatus.Present || record.Status == AttendanceStatus.Late))
         }).ToListAsync();
-        AtRiskCount = rates.GroupBy(value => value.StudentId).Count(group =>
-        {
-            var total = group.Sum(value => value.Sessions);
-            return total > 0 && group.Sum(value => value.Attended) * 100m / total < AtRiskThreshold;
-        });
+        AtRiskCount = rates.GroupBy(value => value.StudentId).Count(group => group.Sum(value => value.Sessions) > 0 && group.Sum(value => value.Attended) * 100m / group.Sum(value => value.Sessions) < AtRiskThreshold);
     }
 
     private async Task LoadStudentAsync(string studentId)
     {
+        var now = DateTime.UtcNow;
         var courseIds = await db.Enrollments.Where(link => link.StudentId == studentId).Select(link => link.CourseId).ToListAsync();
-        CourseCount = courseIds.Count;
-        PeopleCount = CourseCount;
         OpenQueryCount = await db.AttendanceQueries.CountAsync(query => query.StudentId == studentId && (query.Status == AttendanceQueryStatus.Submitted || query.Status == AttendanceQueryStatus.UnderReview));
-        var sessions = await db.LectureSessions.AsNoTracking().Where(session => courseIds.Contains(session.CourseId) && session.StartsAtUtc <= DateTime.UtcNow && session.Status != Models.Academic.LectureSessionStatus.Cancelled)
-            .OrderBy(session => session.StartsAtUtc).Select(session => new
-            {
-                session.CourseId, session.Course.Code, session.Topic, session.StartsAtUtc,
-                Status = session.AttendanceRecords.Where(record => record.StudentId == studentId).Select(record => (AttendanceStatus?)record.Status).FirstOrDefault()
-            }).ToListAsync();
+        var live = await db.LectureSessions.AsNoTracking().Where(session => courseIds.Contains(session.CourseId) && session.AttendanceState == AttendanceWindowState.Open && session.AttendanceClosesAtUtc > now)
+            .OrderBy(session => session.AttendanceClosesAtUtc).Select(session => new { session.Id, session.Course.Code, session.Topic, session.Venue, session.AttendanceClosesAtUtc }).FirstOrDefaultAsync();
+        if (live is not null) LiveSession = new LiveSessionView(live.Id, live.Code, live.Topic, live.Venue, Math.Max(1, (int)Math.Ceiling((live.AttendanceClosesAtUtc!.Value - now).TotalMinutes)));
+        var lecturerIds = await db.CourseLecturers.Where(link => courseIds.Contains(link.CourseId)).Select(link => link.LecturerId).Distinct().ToListAsync();
+        await LoadOfficeHoursAsync(lecturerIds);
+        Upcoming = await LoadUpcomingAsync(courseIds, now, OfficeHoursSlots);
+        var sessions = await db.LectureSessions.AsNoTracking().Where(session => courseIds.Contains(session.CourseId) && session.StartsAtUtc <= now && session.Status != LectureSessionStatus.Cancelled)
+            .Select(session => session.AttendanceRecords.Where(record => record.StudentId == studentId).Select(record => (AttendanceStatus?)record.Status).FirstOrDefault()).ToListAsync();
         SessionCount = sessions.Count;
-        var attended = sessions.Count(value => value.Status is AttendanceStatus.Present or AttendanceStatus.Late);
-        AttendanceRate = Percentage(attended, SessionCount);
+        AttendanceRate = Percentage(sessions.Count(status => status is AttendanceStatus.Present or AttendanceStatus.Late), SessionCount);
         AtRiskCount = SessionCount > 0 && AttendanceRate < AtRiskThreshold ? 1 : 0;
-        Trend = sessions.TakeLast(12).Select(value => new TrendPoint(institutionTime.ToLocal(value.StartsAtUtc).ToString("d MMM"), value.Status is AttendanceStatus.Present or AttendanceStatus.Late ? 100 : 0, $"{value.Code} · {value.Topic}")).ToList();
-        Bars = sessions.GroupBy(value => new { value.CourseId, value.Code }).Select(group => new BarPoint(group.Key.Code,
-            group.Count(value => value.Status is AttendanceStatus.Present or AttendanceStatus.Late),
-            group.Count(value => value.Status is not AttendanceStatus.Present and not AttendanceStatus.Late), group.Key.Code)).ToList();
-        Donut = BuildDonut(sessions.Select(value => value.Status));
-        Heatmap = sessions.GroupBy(value => institutionTime.ToLocal(value.StartsAtUtc).Date).Select(group => new HeatPoint(group.Key.ToString("yyyy-MM-dd"),
-            Percentage(group.Count(value => value.Status is AttendanceStatus.Present or AttendanceStatus.Late), group.Count()), group.Count())).ToList();
     }
 
-    private void BuildSessionCharts(IReadOnlyList<SessionData> sessions)
+    private async Task LoadOfficeHoursAsync(IReadOnlyCollection<string> lecturerIds)
     {
-        var expected = sessions.Sum(value => value.Enrolled);
-        AttendanceRate = Percentage(sessions.Sum(value => value.Present + value.Late), expected);
-        Trend = sessions.TakeLast(12).Select(value => new TrendPoint(institutionTime.ToLocal(value.StartsAtUtc).ToString("d MMM"), Percentage(value.Present + value.Late, value.Enrolled), $"{value.CourseCode} · {value.Topic}")).ToList();
-        Bars = sessions.TakeLast(8).Select(value => new BarPoint(institutionTime.ToLocal(value.StartsAtUtc).ToString("d MMM"), value.Present + value.Late, Math.Max(0, value.Enrolled - value.Present - value.Late), value.CourseCode)).ToList();
-        Donut = [new("Present", sessions.Sum(value => value.Present)), new("Late", sessions.Sum(value => value.Late)), new("Absent", sessions.Sum(value => Math.Max(value.Absent, value.Enrolled - value.Present - value.Late - value.Excused))), new("Excused", sessions.Sum(value => value.Excused))];
-        Heatmap = sessions.GroupBy(value => institutionTime.ToLocal(value.StartsAtUtc).Date).Select(group => new HeatPoint(group.Key.ToString("yyyy-MM-dd"), Percentage(group.Sum(value => value.Present + value.Late), group.Sum(value => value.Enrolled)), group.Count())).ToList();
+        var localNow = institutionTime.ToLocal(DateTime.UtcNow);
+        var slots = await db.OfficeHours.AsNoTracking().Where(slot => lecturerIds.Contains(slot.LecturerId) && slot.IsActive)
+            .OrderBy(slot => slot.DayOfWeek).ThenBy(slot => slot.StartsAt)
+            .Select(slot => new { slot.Id, slot.LecturerId, LecturerName = slot.Lecturer.DisplayName, slot.DayOfWeek, slot.StartsAt, slot.EndsAt, slot.Location }).ToListAsync();
+        OfficeHoursSlots = slots.Select(slot => new OfficeHoursView(slot.Id, slot.LecturerId, slot.LecturerName, slot.DayOfWeek,
+            slot.StartsAt, slot.EndsAt, slot.Location, OfficeHoursService.NextOccurrence(slot.DayOfWeek, slot.StartsAt, localNow))).ToList();
     }
 
-    private static IReadOnlyList<DonutPoint> BuildDonut(IEnumerable<AttendanceStatus?> statuses) =>
-        [new("Present", statuses.Count(value => value == AttendanceStatus.Present)), new("Late", statuses.Count(value => value == AttendanceStatus.Late)), new("Absent", statuses.Count(value => value is null or AttendanceStatus.Absent)), new("Excused", statuses.Count(value => value == AttendanceStatus.Excused))];
+    private async Task<IReadOnlyList<UpcomingItem>> LoadUpcomingAsync(IReadOnlyCollection<int> courseIds, DateTime now, IReadOnlyList<OfficeHoursView> officeHours)
+    {
+        var rows = await db.LectureSessions.AsNoTracking().Where(session => courseIds.Contains(session.CourseId) && session.StartsAtUtc > now && session.Status == LectureSessionStatus.Scheduled)
+            .OrderBy(session => session.StartsAtUtc).Take(3).Select(session => new { session.StartsAtUtc, session.Course.Code, session.Topic, session.Venue }).ToListAsync();
+        var lectures = rows.Select(row => new UpcomingItem(institutionTime.ToLocal(row.StartsAtUtc), $"{row.Code} · {row.Topic}", row.Venue ?? "Venue to be confirmed"));
+        var availability = officeHours.Select(slot => new UpcomingItem(slot.NextOccurrence,
+            IsLecturer ? "Office hours" : $"Office hours · {slot.LecturerName}", slot.Location));
+        return lectures.Concat(availability).OrderBy(item => item.StartsAt).Take(3).ToList();
+    }
+
     private static decimal Percentage(int value, int total) => total == 0 ? 0 : Math.Round(value * 100m / total, 1);
     private static string GetTimeOfDay() => DateTime.Now.Hour < 12 ? "morning" : DateTime.Now.Hour < 18 ? "afternoon" : "evening";
     private static string GetGreetingName(string? name) { var parts = name?.Split(' ', StringSplitOptions.RemoveEmptyEntries) ?? []; return parts.Length == 0 ? "there" : parts.Length > 1 && parts[0] is "Dr" or "Prof" ? $"{parts[0]} {parts[^1]}" : parts[0]; }
 
-    private sealed record SessionData(string CourseCode, string Topic, DateTime StartsAtUtc, int Enrolled, int Present, int Late, int Absent, int Excused);
-    public sealed record TrendPoint(string Label, decimal Value, string Detail);
-    public sealed record BarPoint(string Label, int Attended, int Missed, string Detail);
-    public sealed record DonutPoint(string Label, int Value);
-    public sealed record HeatPoint(string Date, decimal Value, int Sessions);
+    public sealed record LiveSessionView(int Id, string CourseCode, string Topic, string? Venue, int MinutesRemaining);
+    public sealed record UpcomingItem(DateTime StartsAt, string Title, string Subtitle);
+    public sealed record OfficeHoursView(int Id, string LecturerId, string LecturerName, DayOfWeek DayOfWeek, TimeOnly StartsAt,
+        TimeOnly EndsAt, string Location, DateTime NextOccurrence);
 }
